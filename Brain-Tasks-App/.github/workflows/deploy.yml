@@ -1,0 +1,118 @@
+name: Brain Tasks App – CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  ECR_REPO: brain-tasks-app
+  EKS_CLUSTER: brain-tasks-eks
+  K8S_NAMESPACE: production
+  AWS_REGION: us-east-1
+
+jobs:
+  # ─── Lint & static analysis ─────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          ignore: DL3018,DL3008
+
+  # ─── Build & push to ECR ────────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: lint
+    outputs:
+      image-tag: ${{ steps.vars.outputs.short-sha }}
+      ecr-uri: ${{ steps.vars.outputs.ecr-uri }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image variables
+        id: vars
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          ECR_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}"
+          echo "short-sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "ecr-uri=${ECR_URI}"     >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t "${{ steps.vars.outputs.ecr-uri }}:${{ steps.vars.outputs.short-sha }}" \
+            -t "${{ steps.vars.outputs.ecr-uri }}:latest" \
+            .
+
+      - name: Smoke test
+        run: |
+          docker run --rm -d -p 3000:3000 --name smoke \
+            "${{ steps.vars.outputs.ecr-uri }}:${{ steps.vars.outputs.short-sha }}"
+          sleep 5
+          curl -f http://localhost:3000/health
+          docker stop smoke
+
+      - name: Push to ECR
+        run: |
+          docker push "${{ steps.vars.outputs.ecr-uri }}:${{ steps.vars.outputs.short-sha }}"
+          docker push "${{ steps.vars.outputs.ecr-uri }}:latest"
+
+  # ─── Deploy to EKS ──────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to EKS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Update kubeconfig for EKS
+        run: aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
+
+      - name: Patch image tag in deployment.yaml
+        run: |
+          ECR_URI="${{ needs.build-and-push.outputs.ecr-uri }}"
+          IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
+          sed -i "s|<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/${ECR_REPO}:latest|${ECR_URI}:${IMAGE_TAG}|g" k8s/deployment.yaml
+
+      - name: Apply K8s manifests
+        run: |
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout status deployment/brain-tasks-app -n $K8S_NAMESPACE --timeout=5m
+
+      - name: Get LoadBalancer info
+        run: |
+          kubectl get svc brain-tasks-app-svc -n $K8S_NAMESPACE
+          LB=$(kubectl get svc brain-tasks-app-svc -n $K8S_NAMESPACE \
+            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "🌍 App URL: http://${LB}"
