@@ -2,34 +2,15 @@ version: 0.2
 
 env:
   variables:
-    AWS_REGION: ap-south-1
-    IMAGE_REPO_NAME: brain-tasks-app
-    IMAGE_TAG: latest
-    ACCOUNT_ID: 941178225946
-    CLUSTER_NAME: brain-tasks-eks
+    AWS_REGION: "ap-south-1"
+    ACCOUNT_ID: "941178225946"
+    IMAGE_REPO_NAME: "brain-tasks-app"
+    IMAGE_TAG: "latest"
+    CLUSTER_NAME: "brain-tasks-eks"
 
 phases:
   pre_build:
     commands:
-      - echo Logging in to Amazon ECR...
+      - echo AWS_REGION=
+      - echo ACCOUNT_ID=
       - aws ecr get-login-password --region  | docker login --username AWS --password-stdin .dkr.ecr..amazonaws.com
-
-  build:
-    commands:
-      - echo Build started
-      - docker build -t  ./Brain-Tasks-App
-      - docker tag :latest .dkr.ecr..amazonaws.com/:latest
-
-  post_build:
-    commands:
-      - echo Pushing Docker image
-      - docker push .dkr.ecr..amazonaws.com/:latest
-
-      # 🔥 NEW PART (AUTO DEPLOY)
-      - echo Updating kubeconfig
-      - aws eks update-kubeconfig --region  --name 
-
-      - echo Deploying to EKS
-      - kubectl set image deployment/brain-tasks-app         brain-tasks-app=.dkr.ecr..amazonaws.com/:latest         -n production
-
-      - kubectl rollout status deployment/brain-tasks-app -n production
