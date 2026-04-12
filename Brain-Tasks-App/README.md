@@ -98,7 +98,7 @@ docker stop smoke
 ## AWS ECR – Container Registry
 
 ```bash
-export AWS_REGION=us-east-1
+export AWS_REGION=ap-south-1
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 export ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/brain-tasks-app"
 
@@ -166,7 +166,7 @@ aws elbv2 describe-load-balancers \
 
 | Variable | Value |
 |----------|-------|
-| `AWS_REGION` | `us-east-1` |
+| `AWS_REGION` | `ap-south-1` |
 | `ECR_REPO_NAME` | `brain-tasks-app` |
 | `EKS_CLUSTER_NAME` | `brain-tasks-eks` |
 | `K8S_NAMESPACE` | `production` |

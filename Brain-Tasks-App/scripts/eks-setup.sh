@@ -12,10 +12,10 @@
 
 set -euo pipefail
 
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-ap-south-1}"
 CLUSTER_NAME="brain-tasks-eks"
 ECR_REPO="brain-tasks-app"
-NODE_TYPE="t3.medium"
+NODE_TYPE="t3.small"
 NODE_MIN=2
 NODE_MAX=4
 K8S_VERSION="1.29"

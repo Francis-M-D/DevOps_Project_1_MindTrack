@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-ap-south-1}"
 EKS_CLUSTER="${EKS_CLUSTER:-brain-tasks-eks}"
 RETENTION_DAYS=30
 

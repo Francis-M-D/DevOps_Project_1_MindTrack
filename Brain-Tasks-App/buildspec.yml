@@ -6,7 +6,7 @@ version: 0.2
 #
 # Environment variables expected (set in CodeBuild project or SSM):
 #   AWS_ACCOUNT_ID   – 12-digit AWS account number
-#   AWS_REGION       – e.g. us-east-1
+#   AWS_REGION       – e.g. ap-south-1
 #   ECR_REPO_NAME    – brain-tasks-app
 #   EKS_CLUSTER_NAME – brain-tasks-eks
 #   K8S_NAMESPACE    – production

@@ -10,7 +10,7 @@ env:
   ECR_REPO: brain-tasks-app
   EKS_CLUSTER: brain-tasks-eks
   K8S_NAMESPACE: production
-  AWS_REGION: us-east-1
+  AWS_REGION: ap-south-1
 
 jobs:
   # ─── Lint & static analysis ─────────────────────────────────────────────

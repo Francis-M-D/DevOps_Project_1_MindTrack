@@ -37,7 +37,7 @@ spec:
       containers:
         - name: brain-tasks-app
           # Updated by CodeBuild/CodePipeline at deploy time
-          image: <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/brain-tasks-app:latest
+          image: 941178225946.dkr.ecr.ap-south-1.amazonaws.com/brain-tasks-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
