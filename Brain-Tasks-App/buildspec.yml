@@ -11,6 +11,6 @@ env:
 phases:
   pre_build:
     commands:
-      - echo AWS_REGION=
-      - echo ACCOUNT_ID=
-      - aws ecr get-login-password --region  | docker login --username AWS --password-stdin .dkr.ecr..amazonaws.com
+      - echo AWS_REGION=$AWS_REGION
+      - echo ACCOUNT_ID=$ACCOUNT_ID
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
