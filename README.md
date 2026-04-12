@@ -1,226 +1,294 @@
-# 🧠 Brain Tasks App – Production DevOps Pipeline
-
-> **React SPA** served via **Nginx** · **Dockerized** · Deployed to **AWS EKS** via **CodePipeline + CodeBuild**
+# 🚀 DevOps Project 1 – MindTrack CI/CD Pipeline
 
 ---
 
-## 📋 Table of Contents
+## 📌 Project Overview
 
-1. [Architecture Overview](#architecture-overview)
-2. [Repository Structure](#repository-structure)
-3. [Local Run (Port 3000)](#local-run-port-3000)
-4. [Docker Setup](#docker-setup)
-5. [AWS ECR – Container Registry](#aws-ecr--container-registry)
-6. [AWS EKS – Kubernetes Setup](#aws-eks--kubernetes-setup)
-7. [Kubernetes Manifests](#kubernetes-manifests)
-8. [AWS CodeBuild](#aws-codebuild)
-9. [AWS CodePipeline](#aws-codepipeline)
-10. [CloudWatch Monitoring](#cloudwatch-monitoring)
-11. [Pipeline Flow](#pipeline-flow)
+This project demonstrates a **production-ready CI/CD pipeline** that automates the deployment of a containerized frontend application to Kubernetes on AWS.
+
+The pipeline is fully automated:
+
+👉 **Git Push → Build → Docker → ECR → EKS → Live Deployment**
 
 ---
 
-## Architecture Overview
+## 📁 Project Structure
 
-```
-GitHub (push) ──► CodePipeline ──► CodeBuild ──► ECR ──► EKS (production ns)
-                                                              │
-                                                    AWS Network Load Balancer
-                                                              │
-                                                        Users (port 80)
-```
-
-| Layer | Technology |
-|-------|-----------|
-| App   | React (pre-built static dist) |
-| Server | Nginx 1.25 Alpine |
-| Container | Docker |
-| Registry | AWS ECR |
-| Orchestration | AWS EKS (Kubernetes 1.29) |
-| CI/CD | AWS CodeBuild + CodePipeline |
-| Monitoring | AWS CloudWatch + Container Insights |
-
----
-
-## Repository Structure
-
-```
-Brain-Tasks-App/
-├── dist/                        # Pre-built React production files
-│   ├── index.html
-│   ├── vite.svg
-│   └── assets/
-├── Dockerfile                   # Nginx serves dist/ on port 3000
-├── nginx.conf                   # Custom Nginx config
-├── .dockerignore
-├── buildspec.yml                # AWS CodeBuild instructions
-├── k8s/
-│   ├── deployment.yaml          # Deployment + HPA
-│   └── service.yaml             # LoadBalancer Service + Namespace
-├── scripts/
-│   ├── eks-setup.sh             # One-time EKS + ECR provisioning
-│   └── monitoring-setup.sh     # CloudWatch log groups
-└── .github/workflows/deploy.yml # Optional GitHub Actions pipeline
+```text
+DevOps_Project_1_MindTrack/
+├── Brain-Tasks-App/
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── buildspec.yml
+│   ├── dist/
+│   │   ├── assets/
+│   │   ├── index.html
+│   │   └── vite.svg
+│   ├── k8s/
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   ├── nginx.conf
+│   └── scripts/
+│       ├── eks-setup.sh
+│       └── monitoring-setup.sh
+└── README.md
 ```
 
 ---
 
-## Local Run (Port 3000)
+## 🧰 Tech Stack
+
+* GitHub (Source Code + Webhook)
+* AWS CodeBuild (CI/CD)
+* Amazon ECR (Container Registry)
+* Amazon EKS (Kubernetes)
+* Docker
+* kubectl
+* nginx (serving static files)
+
+---
+
+## ⚙️ Application Setup
+
+* Frontend built using Vite/React
+* Production build output: `/dist`
+* Static files served via `nginx:alpine`
+
+---
+
+## 🐳 Docker Setup
+
+### Build Docker Image Locally
 
 ```bash
-git clone https://github.com/Vennilavanguvi/Brain-Tasks-App.git
 cd Brain-Tasks-App
+docker build -t brain-tasks-app .
+docker run -d -p 3000:3000 brain-tasks-app brain-tasks-app:latest
+```
 
-docker build -t brain-tasks-app:local .
-docker run -d -p 3000:3000 --name brain-tasks brain-tasks-app:local
+Open:
 
-open http://localhost:3000
+```
+http://172.31.97.154:3000
 ```
 
 ---
 
-## Docker Setup
+## 📦 Amazon ECR Setup
 
-The Dockerfile uses **Nginx Alpine** to serve the pre-built `dist/` folder on port 3000.
+### Login to ECR
 
 ```bash
-# Build
-docker build -t brain-tasks-app:1.0.0 .
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.ap-south-1.amazonaws.com
+```
 
-# Smoke test
-docker run --rm -d -p 3000:3000 --name smoke brain-tasks-app:1.0.0
-curl -f http://localhost:3000/health && echo "OK"
-docker stop smoke
+### Tag & Push Image
+
+```bash
+docker tag brain-tasks-app:latest <account-id>.dkr.ecr.ap-south-1.amazonaws.com/brain-tasks-app:latest
+docker push <account-id>.dkr.ecr.ap-south-1.amazonaws.com/brain-tasks-app:latest
 ```
 
 ---
 
-## AWS ECR – Container Registry
+## ☸️ Amazon EKS Setup
+
+### Create Cluster
 
 ```bash
-export AWS_REGION=ap-south-1
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/brain-tasks-app"
+eksctl create cluster --name brain-tasks-eks --region ap-south-1
+```
 
-# Create repo
-aws ecr create-repository --repository-name brain-tasks-app \
-  --region $AWS_REGION --image-scanning-configuration scanOnPush=true
+### Configure kubectl
 
-# Login & push
-aws ecr get-login-password --region $AWS_REGION \
-  | docker login --username AWS --password-stdin \
-    "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
-docker tag brain-tasks-app:1.0.0 "${ECR_URI}:latest"
-docker push "${ECR_URI}:latest"
+```bash
+aws eks update-kubeconfig --region ap-south-1 --name brain-tasks-eks
 ```
 
 ---
 
-## AWS EKS – Kubernetes Setup
+## 📦 Kubernetes Deployment
+
+### Create Namespace
 
 ```bash
-# One-time cluster + LBC setup
-chmod +x scripts/eks-setup.sh && ./scripts/eks-setup.sh
-
-# Verify
-kubectl get nodes
-kubectl cluster-info
+kubectl create namespace production
 ```
 
----
-
-## Kubernetes Manifests
+### Apply Configurations
 
 ```bash
-# Update ECR image reference
-sed -i "s|<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>|${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}|g" \
-  k8s/deployment.yaml
-
-# Deploy
-kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/deployment.yaml
-kubectl rollout status deployment/brain-tasks-app -n production
-
-# Get LoadBalancer DNS
-kubectl get svc brain-tasks-app-svc -n production \
-  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-
-# Get NLB ARN
-aws elbv2 describe-load-balancers \
-  --query "LoadBalancers[?contains(DNSName,'brain-tasks')].LoadBalancerArn" \
-  --output text
+kubectl apply -f k8s/service.yaml
 ```
 
 ---
 
-## AWS CodeBuild
-
-**Create project settings:**
-- Source: GitHub → `Brain-Tasks-App` repo
-- Environment: Amazon Linux 2023, Standard image, **Privileged mode ON**
-- Buildspec: use `buildspec.yml` from repo root
-- CloudWatch Logs: `/aws/codebuild/brain-tasks-app`
-
-**Environment variables:**
-
-| Variable | Value |
-|----------|-------|
-| `AWS_REGION` | `ap-south-1` |
-| `ECR_REPO_NAME` | `brain-tasks-app` |
-| `EKS_CLUSTER_NAME` | `brain-tasks-eks` |
-| `K8S_NAMESPACE` | `production` |
-
----
-
-## AWS CodePipeline
-
-**Stages:**
-
-| Stage | Provider | Config |
-|-------|----------|--------|
-| Source | GitHub v2 | Branch: `main`, webhook trigger |
-| Build | CodeBuild | Project: `brain-tasks-app-build` |
-| Deploy | (in buildspec) | `kubectl apply` in `post_build` phase |
-
----
-
-## CloudWatch Monitoring
+### Verify Deployment
 
 ```bash
-# Setup log groups + Container Insights
-chmod +x scripts/monitoring-setup.sh && ./scripts/monitoring-setup.sh
-
-# Tail build logs
-aws logs tail /aws/codebuild/brain-tasks-app --follow
-
-# Tail app logs
-aws logs tail /aws/eks/brain-tasks-eks/application --follow
+kubectl get pods -n production
+kubectl get svc -n productioni
 ```
 
 ---
 
-## Pipeline Flow
+## 🌐 Access Application
+
+```bash
+kubectl get svc -n production
+```
+
+Open in browser:
 
 ```
-Git push to main
-      │
-      ▼
-CodePipeline triggered (webhook)
-      │
-      ▼  CodeBuild
-   ✓  ECR login
-   ✓  docker build + smoke test
-   ✓  docker push (sha-tag + latest)
-   ✓  kubectl apply (service + deployment)
-   ✓  kubectl rollout status
-      │
-      ▼
-EKS – 2 Pods, Rolling update, HPA (2–6 replicas)
-      │
-      ▼
-AWS NLB → port 80 → Nginx:3000 → React SPA
-      │
-      ▼
-CloudWatch Logs (build + app logs, 30-day retention)
+http://a93e9e55bdde54b47878adfabcdaa7da-1339219107.ap-south-1.elb.amazonaws.com/
 ```
+
+---
+
+## 🔐 IAM & RBAC Configuration
+
+Add CodeBuild role to `aws-auth` ConfigMap:
+
+```yaml
+- rolearn: <CODEBUILD_ROLE_ARN>
+  username: codebuild
+  groups:
+    - system:masters
+```
+
+### Verify Access
+
+```bash
+kubectl auth can-i get deployments -n production --as=codebuild
+```
+
+---
+
+## 🏗️ CI/CD Pipeline (CodeBuild)
+
+### Pipeline Steps
+
+1. Code pushed to GitHub
+2. Webhook triggers CodeBuild
+3. Docker image is built
+4. Image pushed to ECR
+5. Kubernetes deployment updated
+6. New version goes live
+
+---
+
+## 📜 buildspec.yml Workflow
+
+* Authenticate to ECR
+* Build Docker image
+* Tag with timestamp
+* Push to ECR
+* Update EKS deployment
+* Monitor rollout
+
+---
+
+## 🔔 Webhook Automation
+
+* GitHub webhook triggers build on every push
+* Fully automated deployment
+
+---
+
+## 📊 Monitoring
+
+### CodeBuild Logs
+
+* Available in CloudWatch
+* Tracks build & deployment steps
+
+### Kubernetes Logs
+
+```bash
+kubectl logs <pod-name> -n production
+```
+
+---
+
+## 🧪 Final Testing
+
+1. Modify application code
+2. Push to GitHub
+
+### Expected:
+
+* Build triggers automatically
+* New image pushed
+* Deployment updated
+* Changes visible in browser
+
+---
+
+## 📸 Screenshots (Add Below)
+
+### 🔹 CodeBuild Success
+
+![CodeBuild](./screenshots/codebuild.png)
+
+### 🔹 CloudWatch Logs
+
+![CloudWatch](./screenshots/cloudwatch.png)
+
+### 🔹 Pods Running
+
+![Pods](./screenshots/pods.png)
+
+### 🔹 Services
+
+![Services](./screenshots/services.png)
+
+### 🔹 Application Live
+
+![App](./screenshots/app.png)
+
+---
+
+## 🌍 Live Application
+
+```
+http://a93e9e55bdde54b47878adfabcdaa7da-1339219107.ap-south-1.elb.amazonaws.com/
+```
+
+---
+
+## 🧹 Cleanup
+
+To avoid AWS charges:
+
+```bash
+eksctl delete cluster --name brain-tasks-eks --region ap-south-1
+```
+
+Also delete:
+
+* ECR repository
+* CodeBuild project
+* CloudWatch logs (optional)
+
+---
+
+## 👨‍💻 Author
+
+**MARIA FRANCIS D**
+
+---
+
+## 🎯 Outcome
+
+A complete CI/CD pipeline:
+
+```
+GitHub → CodeBuild → Docker → ECR → EKS → Live App
+```
+
+Fully automated and production-ready 🚀
+
+---
+
