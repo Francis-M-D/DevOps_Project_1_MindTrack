@@ -226,7 +226,7 @@ kubectl logs <pod-name> -n production
 
 ---
 
-## 📸 Screenshots (Add Below)
+## 📸 Screenshots
 
 ### 🔹 CodeBuild Success
 
@@ -267,7 +267,7 @@ Also delete:
 
 * ECR repository
 * CodeBuild project
-* CloudWatch logs (optional)
+* CloudWatch logs
 
 ---
 
