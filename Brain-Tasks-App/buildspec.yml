@@ -1,107 +1,25 @@
 version: 0.2
 
-#
-# AWS CodeBuild – buildspec.yml
-# Brain Tasks App  |  CI/CD Pipeline
-#
-# Environment variables expected (set in CodeBuild project or SSM):
-#   AWS_ACCOUNT_ID   – 12-digit AWS account number
-#   AWS_REGION       – e.g. ap-south-1
-#   ECR_REPO_NAME    – brain-tasks-app
-#   EKS_CLUSTER_NAME – brain-tasks-eks
-#   K8S_NAMESPACE    – production
-#   IMAGE_TAG        – (auto-set below from $CODEBUILD_RESOLVED_SOURCE_VERSION)
-#
-
 env:
   variables:
-    ECR_REPO_NAME: "brain-tasks-app"
-    K8S_NAMESPACE: "production"
-    EKS_CLUSTER_NAME: "brain-tasks-eks"
-  parameter-store:
-    AWS_ACCOUNT_ID: "/brain-tasks/aws-account-id"
-    AWS_REGION: "/brain-tasks/aws-region"
+    AWS_REGION: ap-south-1
+    IMAGE_REPO_NAME: brain-tasks-app
+    IMAGE_TAG: latest
 
 phases:
-  # ─── 1. INSTALL ───────────────────────────────────────────────────────────
-  install:
-    runtime-versions:
-      docker: 20
-    commands:
-      - echo "=== Install phase ==="
-      - echo "Installing kubectl..."
-      - curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-      - chmod +x kubectl && mv kubectl /usr/local/bin/
-      - kubectl version --client
-      - echo "Verifying AWS CLI..."
-      - aws --version
-
-  # ─── 2. PRE-BUILD ─────────────────────────────────────────────────────────
   pre_build:
     commands:
-      - echo "=== Pre-build phase: Login to ECR ==="
-      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-8)
-      - ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}"
-      - echo "Image URI  -> ${ECR_URI}:${IMAGE_TAG}"
-      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-      - echo "Login successful."
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region  | docker login --username AWS --password-stdin 941178225946.dkr.ecr.ap-south-1.amazonaws.com
 
-  # ─── 3. BUILD ─────────────────────────────────────────────────────────────
   build:
     commands:
-      - echo "=== Build phase: Building Docker image ==="
-      - docker build -t "${ECR_REPO_NAME}:${IMAGE_TAG}" .
-      - docker tag "${ECR_REPO_NAME}:${IMAGE_TAG}" "${ECR_URI}:${IMAGE_TAG}"
-      - docker tag "${ECR_REPO_NAME}:${IMAGE_TAG}" "${ECR_URI}:latest"
-      - echo "Build complete. Running quick smoke test..."
-      - docker run --rm -d -p 3000:3000 --name smoke_test "${ECR_REPO_NAME}:${IMAGE_TAG}"
-      - sleep 5
-      - curl -f http://localhost:3000/health || (echo "Smoke test FAILED"; docker logs smoke_test; exit 1)
-      - docker stop smoke_test
-      - echo "Smoke test passed ✓"
+      - echo Build started
+      - docker build -t : ./Brain-Tasks-App
+      - docker tag : 941178225946.dkr.ecr.ap-south-1.amazonaws.com/:
 
-  # ─── 4. POST-BUILD ────────────────────────────────────────────────────────
   post_build:
     commands:
-      - echo "=== Post-build phase: Push to ECR ==="
-      - docker push "${ECR_URI}:${IMAGE_TAG}"
-      - docker push "${ECR_URI}:latest"
-      - echo "Images pushed to ECR ✓"
-
-      - echo "=== Configuring kubectl for EKS ==="
-      - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME
-      - kubectl get nodes
-
-      - echo "=== Deploying to EKS ==="
-      - kubectl apply -f k8s/service.yaml
-      - |
-        # Patch the deployment image to the exact new tag
-        sed -i "s|<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/${ECR_REPO_NAME}:latest|${ECR_URI}:${IMAGE_TAG}|g" k8s/deployment.yaml
-      - kubectl apply -f k8s/deployment.yaml
-      - kubectl rollout status deployment/brain-tasks-app -n $K8S_NAMESPACE --timeout=5m
-
-      - echo "=== Verifying deployment ==="
-      - kubectl get pods -n $K8S_NAMESPACE -l app=brain-tasks-app
-      - kubectl get svc brain-tasks-app-svc -n $K8S_NAMESPACE
-
-      - echo "=== Fetching Load Balancer DNS ==="
-      - LB_DNS=$(kubectl get svc brain-tasks-app-svc -n $K8S_NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-      - echo "LoadBalancer DNS -> ${LB_DNS}"
-      - echo "Deployment complete ✓"
-
-# ─── ARTIFACTS ───────────────────────────────────────────────────────────────
-artifacts:
-  files:
-    - k8s/deployment.yaml
-    - k8s/service.yaml
-    - imageDetail.json
-  discard-paths: no
-
-# ─── CACHE (speed up future builds) ──────────────────────────────────────────
-cache:
-  paths:
-    - '/root/.docker/**/*'
-
-# ─── LOGS ─────────────────────────────────────────────────────────────────────
-# CloudWatch log group configured in CodeBuild project settings:
-#   /aws/codebuild/brain-tasks-app
+      - echo Pushing Docker image
+      - docker push 941178225946.dkr.ecr.ap-south-1.amazonaws.com/:
+      - echo Build completed
