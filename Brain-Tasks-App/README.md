@@ -1,226 +1,92 @@
-# 🧠 Brain Tasks App – Production DevOps Pipeline
+DevOps Practice Project – Dist Directory
 
-> **React SPA** served via **Nginx** · **Dockerized** · Deployed to **AWS EKS** via **CodePipeline + CodeBuild**
+This repository contains the production-ready build files (dist folder) for DevOps practice and deployment exercises.
 
----
+It is intentionally structured to help learners focus on CI/CD pipelines, hosting, containerization, and infrastructure setup rather than application development.
 
-## 📋 Table of Contents
+📁 What This Repository Contains
 
-1. [Architecture Overview](#architecture-overview)
-2. [Repository Structure](#repository-structure)
-3. [Local Run (Port 3000)](#local-run-port-3000)
-4. [Docker Setup](#docker-setup)
-5. [AWS ECR – Container Registry](#aws-ecr--container-registry)
-6. [AWS EKS – Kubernetes Setup](#aws-eks--kubernetes-setup)
-7. [Kubernetes Manifests](#kubernetes-manifests)
-8. [AWS CodeBuild](#aws-codebuild)
-9. [AWS CodePipeline](#aws-codepipeline)
-10. [CloudWatch Monitoring](#cloudwatch-monitoring)
-11. [Pipeline Flow](#pipeline-flow)
+dist/ – Compiled and production-ready static files
 
----
+HTML
 
-## Architecture Overview
+CSS
 
-```
-GitHub (push) ──► CodePipeline ──► CodeBuild ──► ECR ──► EKS (production ns)
-                                                              │
-                                                    AWS Network Load Balancer
-                                                              │
-                                                        Users (port 80)
-```
+JavaScript
 
-| Layer | Technology |
-|-------|-----------|
-| App   | React (pre-built static dist) |
-| Server | Nginx 1.25 Alpine |
-| Container | Docker |
-| Registry | AWS ECR |
-| Orchestration | AWS EKS (Kubernetes 1.29) |
-| CI/CD | AWS CodeBuild + CodePipeline |
-| Monitoring | AWS CloudWatch + Container Insights |
+Assets (images, fonts, etc.)
 
----
+These files are ready to deploy to:
 
-## Repository Structure
+Web servers (Nginx / Apache)
 
-```
-Brain-Tasks-App/
-├── dist/                        # Pre-built React production files
-│   ├── index.html
-│   ├── vite.svg
-│   └── assets/
-├── Dockerfile                   # Nginx serves dist/ on port 3000
-├── nginx.conf                   # Custom Nginx config
-├── .dockerignore
-├── buildspec.yml                # AWS CodeBuild instructions
-├── k8s/
-│   ├── deployment.yaml          # Deployment + HPA
-│   └── service.yaml             # LoadBalancer Service + Namespace
-├── scripts/
-│   ├── eks-setup.sh             # One-time EKS + ECR provisioning
-│   └── monitoring-setup.sh     # CloudWatch log groups
-└── .github/workflows/deploy.yml # Optional GitHub Actions pipeline
-```
+Cloud platforms (AWS S3, Azure Blob, GCP Storage)
 
----
+Containerized environments (Docker + Nginx)
 
-## Local Run (Port 3000)
+Kubernetes clusters
 
-```bash
-git clone https://github.com/Vennilavanguvi/Brain-Tasks-App.git
-cd Brain-Tasks-App
+CI/CD pipeline demonstrations
 
-docker build -t brain-tasks-app:local .
-docker run -d -p 3000:3000 --name brain-tasks brain-tasks-app:local
+🎯 Purpose of This Repository
 
-open http://localhost:3000
-```
+This repository is designed for:
 
----
+DevOps beginners
 
-## Docker Setup
+CI/CD practice
 
-The Dockerfile uses **Nginx Alpine** to serve the pre-built `dist/` folder on port 3000.
+Deployment pipeline testing
 
-```bash
-# Build
-docker build -t brain-tasks-app:1.0.0 .
+Docker & Kubernetes deployment exercises
 
-# Smoke test
-docker run --rm -d -p 3000:3000 --name smoke brain-tasks-app:1.0.0
-curl -f http://localhost:3000/health && echo "OK"
-docker stop smoke
-```
+Web server configuration practice
 
----
+Reverse proxy and load balancer setup
 
-## AWS ECR – Container Registry
+The goal is to simulate real-world deployment scenarios using already built application files.
 
-```bash
-export AWS_REGION=ap-south-1
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/brain-tasks-app"
+❓ Why is there NO package.json?
 
-# Create repo
-aws ecr create-repository --repository-name brain-tasks-app \
-  --region $AWS_REGION --image-scanning-configuration scanOnPush=true
+You may notice that this repository does not include:
 
-# Login & push
-aws ecr get-login-password --region $AWS_REGION \
-  | docker login --username AWS --password-stdin \
-    "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+package.json
 
-docker tag brain-tasks-app:1.0.0 "${ECR_URI}:latest"
-docker push "${ECR_URI}:latest"
-```
+node_modules
 
----
+Source code (src/)
 
-## AWS EKS – Kubernetes Setup
+Build tools configuration
 
-```bash
-# One-time cluster + LBC setup
-chmod +x scripts/eks-setup.sh && ./scripts/eks-setup.sh
+✅ Reason:
 
-# Verify
-kubectl get nodes
-kubectl cluster-info
-```
+This repository only contains the final production build output (dist), not the development source code.
 
----
+In a typical project:
 
-## Kubernetes Manifests
+Developers write source code.
 
-```bash
-# Update ECR image reference
-sed -i "s|<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>|${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}|g" \
-  k8s/deployment.yaml
+The project is built using tools like:
 
-# Deploy
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/deployment.yaml
-kubectl rollout status deployment/brain-tasks-app -n production
+Node.js
 
-# Get LoadBalancer DNS
-kubectl get svc brain-tasks-app-svc -n production \
-  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+Webpack
 
-# Get NLB ARN
-aws elbv2 describe-load-balancers \
-  --query "LoadBalancers[?contains(DNSName,'brain-tasks')].LoadBalancerArn" \
-  --output text
-```
+Vite
 
----
+React (or other frameworks)
 
-## AWS CodeBuild
+A dist/ folder is generated.
 
-**Create project settings:**
-- Source: GitHub → `Brain-Tasks-App` repo
-- Environment: Amazon Linux 2023, Standard image, **Privileged mode ON**
-- Buildspec: use `buildspec.yml` from repo root
-- CloudWatch Logs: `/aws/codebuild/brain-tasks-app`
+Only the production build is deployed to servers.
 
-**Environment variables:**
+This repository represents step 4 only.
 
-| Variable | Value |
-|----------|-------|
-| `AWS_REGION` | `ap-south-1` |
-| `ECR_REPO_NAME` | `brain-tasks-app` |
-| `EKS_CLUSTER_NAME` | `brain-tasks-eks` |
-| `K8S_NAMESPACE` | `production` |
+Since this is already the compiled output:
 
----
+No dependencies are required
 
-## AWS CodePipeline
+No build process is required
 
-**Stages:**
-
-| Stage | Provider | Config |
-|-------|----------|--------|
-| Source | GitHub v2 | Branch: `main`, webhook trigger |
-| Build | CodeBuild | Project: `brain-tasks-app-build` |
-| Deploy | (in buildspec) | `kubectl apply` in `post_build` phase |
-
----
-
-## CloudWatch Monitoring
-
-```bash
-# Setup log groups + Container Insights
-chmod +x scripts/monitoring-setup.sh && ./scripts/monitoring-setup.sh
-
-# Tail build logs
-aws logs tail /aws/codebuild/brain-tasks-app --follow
-
-# Tail app logs
-aws logs tail /aws/eks/brain-tasks-eks/application --follow
-```
-
----
-
-## Pipeline Flow
-
-```
-Git push to main
-      │
-      ▼
-CodePipeline triggered (webhook)
-      │
-      ▼  CodeBuild
-   ✓  ECR login
-   ✓  docker build + smoke test
-   ✓  docker push (sha-tag + latest)
-   ✓  kubectl apply (service + deployment)
-   ✓  kubectl rollout status
-      │
-      ▼
-EKS – 2 Pods, Rolling update, HPA (2–6 replicas)
-      │
-      ▼
-AWS NLB → port 80 → Nginx:3000 → React SPA
-      │
-      ▼
-CloudWatch Logs (build + app logs, 30-day retention)
-```
+No package.json is needed
+Changes
