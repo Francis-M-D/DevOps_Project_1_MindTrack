@@ -28,12 +28,12 @@ phases:
   post_build:
     commands:
       - echo Pushing image to ECR...
-      - docker push .dkr.ecr..amazonaws.com/:
+      - docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
 
       - echo Updating kubeconfig...
-      - aws eks update-kubeconfig --region  --name 
+      - aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
       - echo Deploying new image...
-      - kubectl set image deployment/brain-tasks-app         brain-tasks-app=.dkr.ecr..amazonaws.com/:         -n production
+      - kubectl set image deployment/brain-tasks-app brain-tasks-app=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG -n production
 
       - kubectl rollout status deployment/brain-tasks-app -n production
