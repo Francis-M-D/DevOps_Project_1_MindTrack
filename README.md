@@ -230,23 +230,20 @@ kubectl logs <pod-name> -n production
 
 ### 🔹 CodeBuild Success
 
-![CodeBuild](./screenshots/codebuild.png)
+![CodeBuild](.screenshots/codebuild.png)
 
 ### 🔹 CloudWatch Logs
 
-![CloudWatch](./screenshots/cloudwatch.png)
+![CloudWatch](.screenshots/cloudwatch.png)
 
 ### 🔹 Pods Running
 
-![Pods](./screenshots/pods.png)
+![Pods](.screenshots/pods.png)
 
-### 🔹 Services
-
-![Services](./screenshots/services.png)
 
 ### 🔹 Application Live
 
-![App](./screenshots/app.png)
+![App](.screenshots/app.png)
 
 ---
 
