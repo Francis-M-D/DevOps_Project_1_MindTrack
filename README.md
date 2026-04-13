@@ -17,6 +17,8 @@ The pipeline is fully automated:
 
 ```
 
+```text
+
 DevOps_Project_1_MindTrack$ tree
 ├── Brain-Tasks-App
 │   ├── Dockerfile
@@ -37,6 +39,8 @@ DevOps_Project_1_MindTrack$ tree
 │       ├── eks-setup.sh
 │       └── monitoring-setup.sh
 └── README.md
+```
+
 
 ````
 
