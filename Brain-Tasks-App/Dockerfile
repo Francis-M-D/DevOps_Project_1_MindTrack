@@ -1,10 +1,5 @@
-# ─────────────────────────────────────────────
-# Stage 1: Serve the pre-built dist with Nginx
-# ─────────────────────────────────────────────
 FROM nginx:1.25-alpine
 
-LABEL maintainer="devops@braintasks.app"
-LABEL app="brain-tasks-app"
 LABEL version="1.0.0"
 
 # Remove the default Nginx welcome page

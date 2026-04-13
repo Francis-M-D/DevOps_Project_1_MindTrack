@@ -17,8 +17,9 @@ phases:
     commands:
       - echo "Build started"
       - IMAGE_TAG=$(date +%s)
+      - echo "Image tag = $IMAGE_TAG"
       - echo "Building Docker image"
-      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG ./Brain-Tasks-App
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
 
   post_build:
