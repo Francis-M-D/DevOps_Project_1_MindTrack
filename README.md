@@ -1,4 +1,3 @@
-```markdown
 # 🚀 DevOps Project 1 – MindTrack CI/CD Pipeline
 
 ---
@@ -15,7 +14,6 @@ The pipeline is fully automated:
 
 ## 📁 Project Structure
 
-```
 
 ```text
 
@@ -304,8 +302,5 @@ Also delete:
 GitHub → CodePipeline → CodeBuild → Docker → ECR → EKS → Live App
 ```
 
-Fully automated, scalable, and production-ready 🚀
 
-```
-```
 
