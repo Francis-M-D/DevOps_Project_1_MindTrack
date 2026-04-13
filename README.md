@@ -1,3 +1,4 @@
+```markdown
 # 🚀 DevOps Project 1 – MindTrack CI/CD Pipeline
 
 ---
@@ -8,51 +9,57 @@ This project demonstrates a **production-ready CI/CD pipeline** that automates t
 
 The pipeline is fully automated:
 
-👉 **Git Push → Build → Docker → ECR → EKS → Live Deployment**
+👉 **Git Push → CodePipeline → CodeBuild → Docker → ECR → EKS → Live Deployment**
 
 ---
 
 ## 📁 Project Structure
 
-```text
-DevOps_Project_1_MindTrack/
-├── Brain-Tasks-App/
-│   ├── Dockerfile
-│   ├── README.md
-│   ├── buildspec.yml
-│   ├── dist/
-│   │   ├── assets/
-│   │   ├── index.html
-│   │   └── vite.svg
-│   ├── k8s/
-│   │   ├── deployment.yaml
-│   │   └── service.yaml
-│   ├── nginx.conf
-│   └── scripts/
-│       ├── eks-setup.sh
-│       └── monitoring-setup.sh
-└── README.md
 ```
+
+DevOps_Project_1_MindTrack$ tree
+├── Brain-Tasks-App
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── buildspec.yml
+│   ├── dist
+│   │   ├── assets
+│   │   │   ├── index-BHGiHu50.js
+│   │   │   └── index-DPTLVrPB.css
+│   │   ├── index.html
+│   │   └── vite.svg
+│   ├── iam-policy.json
+│   ├── k8s
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   ├── nginx.conf
+│   └── scripts
+│       ├── eks-setup.sh
+│       └── monitoring-setup.sh
+└── README.md
+
+````
 
 ---
 
 ## 🧰 Tech Stack
 
-* GitHub (Source Code + Webhook)
-* AWS CodeBuild (CI/CD)
-* Amazon ECR (Container Registry)
-* Amazon EKS (Kubernetes)
-* Docker
-* kubectl
-* nginx (serving static files)
+- GitHub (Source Code + Webhook)
+- AWS CodePipeline (Pipeline Orchestration)
+- AWS CodeBuild (Build & Deploy)
+- Amazon ECR (Container Registry)
+- Amazon EKS (Kubernetes)
+- Docker
+- kubectl
+- nginx
 
 ---
 
 ## ⚙️ Application Setup
 
-* Frontend built using Vite/React
-* Production build output: `/dist`
-* Static files served via `nginx:alpine`
+- Frontend built using Vite/React
+- Production build output: `/dist`
+- Static files served using Nginx container
 
 ---
 
@@ -63,13 +70,13 @@ DevOps_Project_1_MindTrack/
 ```bash
 cd Brain-Tasks-App
 docker build -t brain-tasks-app .
-docker run -d -p 3000:3000 brain-tasks-app brain-tasks-app:latest
-```
+docker run -d -p 3000:3000 brain-tasks-app
+````
 
 Open:
 
 ```
-http://172.31.97.154:3000
+http://<your-server-ip>:3000
 ```
 
 ---
@@ -128,7 +135,7 @@ kubectl apply -f k8s/service.yaml
 
 ```bash
 kubectl get pods -n production
-kubectl get svc -n productioni
+kubectl get svc -n production
 ```
 
 ---
@@ -139,17 +146,17 @@ kubectl get svc -n productioni
 kubectl get svc -n production
 ```
 
-Open in browser:
+Open:
 
 ```
-http://a93e9e55bdde54b47878adfabcdaa7da-1339219107.ap-south-1.elb.amazonaws.com/
+http://<load-balancer-url>
 ```
 
 ---
 
 ## 🔐 IAM & RBAC Configuration
 
-Add CodeBuild role to `aws-auth` ConfigMap:
+Add CodeBuild role to `aws-auth`:
 
 ```yaml
 - rolearn: <CODEBUILD_ROLE_ARN>
@@ -166,16 +173,17 @@ kubectl auth can-i get deployments -n production --as=codebuild
 
 ---
 
-## 🏗️ CI/CD Pipeline (CodeBuild)
+## 🏗️ CI/CD Pipeline
 
-### Pipeline Steps
+### Pipeline Flow
 
 1. Code pushed to GitHub
-2. Webhook triggers CodeBuild
-3. Docker image is built
-4. Image pushed to ECR
-5. Kubernetes deployment updated
-6. New version goes live
+2. Webhook triggers CodePipeline
+3. CodePipeline triggers CodeBuild
+4. Docker image is built
+5. Image pushed to ECR
+6. Kubernetes deployment updated in EKS
+7. New version goes live
 
 ---
 
@@ -185,24 +193,26 @@ kubectl auth can-i get deployments -n production --as=codebuild
 * Build Docker image
 * Tag with timestamp
 * Push to ECR
-* Update EKS deployment
+* Update Kubernetes deployment
 * Monitor rollout
 
 ---
 
-## 🔔 Webhook Automation
+## 🔔 Automation
 
-* GitHub webhook triggers build on every push
-* Fully automated deployment
+* GitHub webhook triggers pipeline automatically
+* No manual intervention required
 
 ---
 
 ## 📊 Monitoring
 
-### CodeBuild Logs
+### Build Logs
 
 * Available in CloudWatch
-* Tracks build & deployment steps
+* Tracks Docker build and deployment steps
+
+---
 
 ### Kubernetes Logs
 
@@ -214,19 +224,26 @@ kubectl logs <pod-name> -n production
 
 ## 🧪 Final Testing
 
-1. Modify application code
+1. Make code changes
 2. Push to GitHub
 
-### Expected:
+### Expected Outcome:
 
-* Build triggers automatically
-* New image pushed
-* Deployment updated
-* Changes visible in browser
+```
+✔ Pipeline triggers automatically
+✔ Build completes successfully
+✔ New image pushed to ECR
+✔ Pods updated in EKS
+✔ Changes visible in browser
+```
 
 ---
 
 ## 📸 Screenshots
+
+### 🔹 CodePipeline Success
+
+![CodePipeline](.screenshots/codepipeline.png)
 
 ### 🔹 CodeBuild Success
 
@@ -240,7 +257,6 @@ kubectl logs <pod-name> -n production
 
 ![Pods](.screenshots/pods.png)
 
-
 ### 🔹 Application Live
 
 ![App](.screenshots/app.png)
@@ -250,7 +266,7 @@ kubectl logs <pod-name> -n production
 ## 🌍 Live Application
 
 ```
-http://a93e9e55bdde54b47878adfabcdaa7da-1339219107.ap-south-1.elb.amazonaws.com/
+http://<your-load-balancer-url>
 ```
 
 ---
@@ -267,6 +283,7 @@ Also delete:
 
 * ECR repository
 * CodeBuild project
+* CodePipeline pipeline
 * CloudWatch logs
 
 ---
@@ -279,13 +296,12 @@ Also delete:
 
 ## 🎯 Outcome
 
-A complete CI/CD pipeline:
-
 ```
-GitHub → CodeBuild → Docker → ECR → EKS → Live App
+GitHub → CodePipeline → CodeBuild → Docker → ECR → EKS → Live App
 ```
 
-Fully automated and production-ready 🚀
+Fully automated, scalable, and production-ready 🚀
 
----
+```
+```
 
